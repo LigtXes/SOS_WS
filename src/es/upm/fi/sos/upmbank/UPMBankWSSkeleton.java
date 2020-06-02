@@ -172,9 +172,9 @@ import org.apache.axis2.AxisFault;
                 //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#removeUser");
                 	 es.upm.fi.sos.upmbank.RemoveUserResponse response = new es.upm.fi.sos.upmbank.RemoveUserResponse();
                 	 es.upm.fi.sos.upmbank.xsd.Response param = new es.upm.fi.sos.upmbank.xsd.Response();
-                	 if(name == "admin"){
+                	 if(name.equals("admin")){
                 		 String username = removeUser.localArgs0.getUsername();
-                		 if(username == "admin"){
+                		 if(username.equals("admin")){
                 			 //No se puede borrar el administrador
                 			 param.setResponse(false);
                 			 response.set_return(param);
@@ -306,10 +306,12 @@ import org.apache.axis2.AxisFault;
                 //TODO : fill this with the necessary business logic
                 //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#addUser");
                 	 
+                	 System.out.println("Add User Service");
                 	 es.upm.fi.sos.upmbank.AddUserResponse response = new es.upm.fi.sos.upmbank.AddUserResponse();
                 	 es.upm.fi.sos.upmbank.xsd.AddUserResponse param = new es.upm.fi.sos.upmbank.xsd.AddUserResponse();
                 	 
-                	 if(this.name == "admin"){
+                	 
+                	 if(this.name.equals("admin")){
                 		 
 						try {
 							es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub = 
@@ -447,8 +449,10 @@ import org.apache.axis2.AxisFault;
                 String name = login.getArgs0().getName();
                 String psw = login.getArgs0().getPwd();
                 
-                if(name == "admin"){
-                	if(psw == superUserPSW){
+                System.out.println("Username: "+name+" Password: "+psw);
+                System.out.println("Super admin password: "+superUserPSW);
+                if(name.equals("admin")){
+                	if(psw.equals(superUserPSW)){
                         LoginResponse response = new LoginResponse();
                 		es.upm.fi.sos.upmbank.xsd.Response returnResponse = new es.upm.fi.sos.upmbank.xsd.Response(); 
     					returnResponse.setResponse(true);
@@ -486,8 +490,8 @@ import org.apache.axis2.AxisFault;
                 try {
 					stub = new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub();
 					stub._getServiceClient().getOptions().setManageSession(true);
-					stub._getServiceClient().engageModule("addressing");
-					stub._getServiceClient().getOptions().setUseSeparateListener(true);
+					//stub._getServiceClient().engageModule("addressing");
+					//stub._getServiceClient().getOptions().setUseSeparateListener(true);
 					//Send info to the Server
 					login6 = new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.Login();
 					es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.LoginBackEnd param;
@@ -609,8 +613,8 @@ import org.apache.axis2.AxisFault;
                 	 String old = changePassword.localArgs0.getOldpwd();
                 	 String newPsw = changePassword.localArgs0.getNewpwd();
                 	 
-                	 if(name == "admin"){
-                		 if(superUserPSW == old){
+                	 if(name.equals("admin")){
+                		 if(superUserPSW.equals(old)){
                 			 superUserPSW = newPsw;
                 			 param.setResponse(true);
                 			 response.set_return(param);
@@ -621,7 +625,7 @@ import org.apache.axis2.AxisFault;
                 			 return response;
                 		 }
                 	 }
-                	 else if(password.get(name) == old){
+                	 else if(password.get(name).equals(old)){
                 		 try{
 	                		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub;
 	                		 stub = users.get(instance);
