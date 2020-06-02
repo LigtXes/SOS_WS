@@ -30,7 +30,12 @@ import org.apache.axis2.AxisFault;
     	
     	private Map<Integer, es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub> users = 
     			new HashMap<>();
+    	private static Map<String, String> password = 
+    	 		new HashMap<>();
+    	private static Map<String, Map<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit>> bankAcc = 
+    			new HashMap<>();
     	
+    			
         /**
          * Auto generated method signature
          * 
@@ -99,8 +104,53 @@ import org.apache.axis2.AxisFault;
                   )
             {
                 //TODO : fill this with the necessary business logic
-                throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#removeUser");
-        }
+                //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#removeUser");
+                	 es.upm.fi.sos.upmbank.RemoveUserResponse response = new es.upm.fi.sos.upmbank.RemoveUserResponse();
+                	 es.upm.fi.sos.upmbank.xsd.Response param = new es.upm.fi.sos.upmbank.xsd.Response();
+                	 if(name == "admin"){
+                		 String username = removeUser.localArgs0.getUsername();
+                		 if(username == "admin"){
+                			 //No se puede borrar el administrador
+                			 param.setResponse(false);
+                			 response.set_return(param);
+                			 return response;
+                		 }else{
+                			 try{
+                				 String psw = password.get(username);
+                				 
+	                    		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub = 
+	                    				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub();
+	                    		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.RemoveUserResponseE responseFromServer = 
+	                    				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.RemoveUserResponseE();
+	                    		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.RemoveUserE removeUserToServer = 
+	                    				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.RemoveUserE();
+	                    		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.RemoveUser paramServ = 
+	                    				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.RemoveUser();
+	                    		 
+	                    		 paramServ.setName(username);
+	                    		 paramServ.setPassword(psw);
+	                    		 removeUserToServer.setRemoveUser(paramServ);
+	                    		 responseFromServer = stub.removeUser(removeUserToServer);
+	                    		 
+	                    		 param.setResponse(responseFromServer.get_return().getResult());
+	                    		 response.set_return(param);
+	                    		 return response;
+	                    		 
+                			 } catch (RemoteException e){
+                				 e.printStackTrace();
+                			 }
+                    		 
+                		 }
+                	 }else{
+                		 //Solo el administrador puede borrar
+                		 param.setResponse(false);
+                		 response.set_return(param);
+                		 return response;
+                	 }
+                	 
+                	 
+                	 return response;
+            }
      
          
         /**
@@ -139,8 +189,10 @@ import org.apache.axis2.AxisFault;
                 	 es.upm.fi.sos.upmbank.xsd.AddUserResponse param = new es.upm.fi.sos.upmbank.xsd.AddUserResponse();
                 	 
                 	 if(this.name == "admin"){
-                		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub;
+                		 
 						try {
+							es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub = 
+	                				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub();
 							 //Check if user exist
 							 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ExistUser existUser4 = 
 									 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ExistUser();
@@ -179,13 +231,13 @@ import org.apache.axis2.AxisFault;
 							
 							
 							response.set_return(param);
-						} catch (RemoteException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
 						} catch (AxisFault e1) {
 							// TODO Auto-generated catch block
 							e1.printStackTrace();
-						}
+						} catch (RemoteException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} 
      					
                 	 }else{
                 		 param.setResponse(false);
@@ -284,6 +336,7 @@ import org.apache.axis2.AxisFault;
 						instance = instanceCounter;
 						instanceCounter++;
 						users.put(instance, stub);
+						password.putIfAbsent(name, psw);
 						this.name = name; //We don't really need this, it only serve to know who is the super user
 					}else{
 						//Nada, no guardamos rasgos
@@ -332,10 +385,62 @@ import org.apache.axis2.AxisFault;
                   (
                   es.upm.fi.sos.upmbank.ChangePassword changePassword
                   )
-            {
+            {       	 
                 //TODO : fill this with the necessary business logic
-                throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#changePassword");
-        }
+                //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#changePassword");
+                	 es.upm.fi.sos.upmbank.ChangePasswordResponse response = 
+                			 new es.upm.fi.sos.upmbank.ChangePasswordResponse();
+                	 
+                	 es.upm.fi.sos.upmbank.xsd.Response param = 
+                			 new es.upm.fi.sos.upmbank.xsd.Response();
+                	 
+                	 String old = changePassword.localArgs0.getOldpwd();
+                	 String newPsw = changePassword.localArgs0.getNewpwd();
+                	 
+                	 if(name == "admin"){
+                		 if(superUserPSW == old){
+                			 superUserPSW = newPsw;
+                			 param.setResponse(true);
+                			 response.set_return(param);
+                			 return response; 
+                		 }else{
+                			 param.setResponse(false);
+                			 response.set_return(param);
+                			 return response;
+                		 }
+                	 }
+                	 else if(password.get(name) == old){
+                		 try{
+	                		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub;
+	                		 stub = users.get(instance);
+	                		 
+	                		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ChangePasswordResponseE responseFromServ = 
+	                				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ChangePasswordResponseE();
+	                		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ChangePassword server = 
+	                				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ChangePassword();
+	                		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ChangePasswordBackEnd serverParam = 
+	                				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ChangePasswordBackEnd();
+	                		 
+	                		 serverParam.setName(name);
+	                		 serverParam.setOldpwd(old);
+	                		 serverParam.setNewpwd(newPsw);
+	                		 server.setChangePassword(serverParam);
+	                		 
+	                		 responseFromServ = stub.changePassword(server);
+	                		 
+	                		 param.setResponse(responseFromServ.get_return().getResult());
+	                		 response.set_return(param);
+	                		 return response;
+                		 } catch (RemoteException e){
+                			 e.printStackTrace();
+                		 }
+                	 }else{
+                		 param.setResponse(false);
+            			 response.set_return(param);
+            			 return response;
+                	 }
+                	 return response;
+            }
      
     }
     
