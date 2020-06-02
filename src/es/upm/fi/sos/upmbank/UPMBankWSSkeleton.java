@@ -29,12 +29,13 @@ import org.apache.axis2.AxisFault;
     	private static String superUserPSW = "admin";
     	
     	private Map<Integer, es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub> users = 
-    			new HashMap<>();
+    			new HashMap<>(); //<instance, Stub>
     	private static Map<String, String> password = 
-    	 		new HashMap<>();
+    	 		new HashMap<>(); //<Username, password>
     	private static Map<String, Map<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit>> bankAcc = 
-    			new HashMap<>();
-    	
+    			new HashMap<>(); //<Username, <BankAccount (IBAN), Deposit>>
+    	private static Map<String, List<es.upm.fi.sos.upmbank.xsd.Movement>> movementList = 
+    			new HashMap<>(); //<Username, Movement (withdraw and income)>
     			
         /**
          * Auto generated method signature
@@ -49,8 +50,33 @@ import org.apache.axis2.AxisFault;
                   )
             {
                 //TODO : fill this with the necessary business logic
-                throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#addBankAcc");
-        }
+                //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#addBankAcc");
+                	 es.upm.fi.sos.upmbank.AddBankAccResponse response =
+                			 new es.upm.fi.sos.upmbank.AddBankAccResponse();
+                	 es.upm.fi.sos.upmbank.xsd.BankAccountResponse param = 
+                			 new es.upm.fi.sos.upmbank.xsd.BankAccountResponse();
+                	 
+                	 if(name != null & addBankAcc.isArgs0Specified() & addBankAcc.localArgs0.isQuantitySpecified()){ //We stop at the first one who is false
+                		 es.upm.fi.sos.upmbank.xsd.BankAccount bankAccount = 
+                				 new es.upm.fi.sos.upmbank.xsd.BankAccount();
+                		 es.upm.fi.sos.upmbank.xsd.Deposit bankDeposit = 
+                				 new es.upm.fi.sos.upmbank.xsd.Deposit();
+                		 int num = bankAcc.get(name).size();
+                		 bankAccount.setIBAN(name+num);
+                		 bankDeposit.setQuantity(addBankAcc.localArgs0.getQuantity());
+                		 
+                		 bankAcc.get(name).put(bankAccount, bankDeposit); //Account is created
+                		 
+                		 param.setIBAN(bankAccount.getIBAN());
+                		 param.setResult(true);
+                		 response.set_return(param);
+                		 return response;
+                	 }else{
+                		 param.setResult(false);
+                		 response.set_return(param);
+                		 return response;
+                	 }
+            }
      
          
         /**
@@ -66,8 +92,46 @@ import org.apache.axis2.AxisFault;
                   )
             {
                 //TODO : fill this with the necessary business logic
-                throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#closeBankAcc");
-        }
+                //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#closeBankAcc");
+                	 es.upm.fi.sos.upmbank.CloseBankAccResponse response = 
+                			 new es.upm.fi.sos.upmbank.CloseBankAccResponse();
+                	 es.upm.fi.sos.upmbank.xsd.Response param = 
+                			 new es.upm.fi.sos.upmbank.xsd.Response();
+                	 
+                	 if(name != null & closeBankAcc.localArgs0Tracker & closeBankAcc.localArgs0.isIBANSpecified()){
+                		 //Connect
+                		 String IBAN = closeBankAcc.getArgs0().getIBAN();
+                		 
+             
+                		 if(!bankAcc.get(name).containsKey(IBAN)){
+                			 //En ese caso la cuenta especificada no existe
+                			 param.setResponse(false);
+                			 response.set_return(param);
+                			 return response;
+                		 }
+                		 es.upm.fi.sos.upmbank.xsd.Deposit deposit = bankAcc.get(name).get(IBAN);
+                		 
+                		 if(deposit.getQuantity() != 0){
+                			 //Comprobamos que la cuenta es igual a 0
+                			 param.setResponse(false);
+                			 response.set_return(param);
+                			 return response;
+                		 }
+                		 
+                		 bankAcc.get(name).remove(IBAN); //Boramos la cuenta tras haberlo controlado todo
+                		 
+                		 param.setResponse(true);
+                		 response.set_return(param);
+                		 return response;
+
+                	 }else{
+                		 //Not connect or something wrong on closeBankAcc
+                		 param.setResponse(false);
+                		 response.set_return(param);
+                		 return response;
+                	 }
+                	 
+            }
      
          
         /**
@@ -87,6 +151,7 @@ import org.apache.axis2.AxisFault;
                 	if(users.containsKey(instance)){
                 		users.remove(instance);
                 	}
+                	name = null; //Eso nos permite saber que ya no esta identificado
                 
         }
      
@@ -117,6 +182,13 @@ import org.apache.axis2.AxisFault;
                 		 }else{
                 			 try{
                 				 String psw = password.get(username);
+                				 
+                				 if(bankAcc.get(username).size() != 0){
+                					 //El usuario aun tiene cuentas bancarias
+                					 param.setResponse(false);
+                        			 response.set_return(param);
+                        			 return response;
+                				 }
                 				 
 	                    		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub = 
 	                    				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub();
@@ -166,8 +238,57 @@ import org.apache.axis2.AxisFault;
                   )
             {
                 //TODO : fill this with the necessary business logic
-                throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#addWithdrawal");
-        }
+                //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#addWithdrawal");
+                	//throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#addIncome");
+                	 es.upm.fi.sos.upmbank.AddWithdrawalResponse response = 
+                			 new es.upm.fi.sos.upmbank.AddWithdrawalResponse();
+                	 es.upm.fi.sos.upmbank.xsd.AddMovementResponse param = 
+                			 new es.upm.fi.sos.upmbank.xsd.AddMovementResponse();
+                	 if(name != null &
+                			 addWithdrawal.localArgs0Tracker &
+                			 addWithdrawal.localArgs0.isIBANSpecified() &
+                			 addWithdrawal.localArgs0.isQuantitySpecified()){
+                		 //Connect
+                		 
+                		 es.upm.fi.sos.upmbank.xsd.Movement movement = 
+                				 new es.upm.fi.sos.upmbank.xsd.Movement();
+                		 String IBAN = addWithdrawal.getArgs0().getIBAN();
+                		 double withdraw = addWithdrawal.getArgs0().getQuantity();
+                		 
+                		 if(!bankAcc.get(name).containsKey(IBAN)){
+                			 param.setResult(false);
+                			 response.set_return(param);
+                			 return response;
+                		 }
+                		 
+                		 double deposit = bankAcc.get(name).get(IBAN).getQuantity();
+                		 double newDeposite = deposit - withdraw;
+                		 
+                		 if(newDeposite < 0){
+                			 param.setResult(false);
+                			 response.set_return(param);
+                			 return response;
+                		 }
+                		 
+                		 bankAcc.get(name).get(IBAN).setQuantity(newDeposite);
+                		 
+                		 movement.setIBAN(IBAN);
+                		 movement.setQuantity(withdraw * (-1)); //We multiply per -1 to know it's a withdraw
+                		 movementList.get(name).add(movement);
+                		 
+                		 param.setBalance(newDeposite);
+                		 param.setResult(true);
+                		 response.set_return(param);
+                		 return response;                		 
+                		 
+                		 
+                	 }else{
+                		 //Not connect or not specified value
+                		 param.setResult(false);
+                		 response.set_return(param);
+                		 return response;
+                	 }
+            }
      
          
         /**
@@ -261,8 +382,50 @@ import org.apache.axis2.AxisFault;
                   )
             {
                 //TODO : fill this with the necessary business logic
-                throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#addIncome");
-        }
+                //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#addIncome");
+                	 es.upm.fi.sos.upmbank.AddIncomeResponse response = 
+                			 new es.upm.fi.sos.upmbank.AddIncomeResponse();
+                	 es.upm.fi.sos.upmbank.xsd.AddMovementResponse param = 
+                			 new es.upm.fi.sos.upmbank.xsd.AddMovementResponse();
+                	 
+                	 if(name != null &
+                			 addIncome.localArgs0Tracker &
+                			 addIncome.localArgs0.isIBANSpecified() &
+                			 addIncome.localArgs0.isQuantitySpecified()){
+                		 //Connect
+                		 
+                		 es.upm.fi.sos.upmbank.xsd.Movement movement = 
+                				 new es.upm.fi.sos.upmbank.xsd.Movement();
+                		 String IBAN = addIncome.getArgs0().getIBAN();
+                		 double income = addIncome.getArgs0().getQuantity();
+                		 
+                		 if(!bankAcc.get(name).containsKey(IBAN)){
+                			 param.setResult(false);
+                			 response.set_return(param);
+                			 return response;
+                		 }
+                		 
+                		 double deposit = bankAcc.get(name).get(IBAN).getQuantity();
+                		 double newDeposite = income + deposit;
+                		 bankAcc.get(name).get(IBAN).setQuantity(newDeposite);
+                		 
+                		 movement.setIBAN(IBAN);
+                		 movement.setQuantity(income);
+                		 movementList.get(name).add(movement);
+                		 
+                		 param.setBalance(newDeposite);
+                		 param.setResult(true);
+                		 response.set_return(param);
+                		 return response;                		 
+                		 
+                		 
+                	 }else{
+                		 //Not connect or not specified value
+                		 param.setResult(false);
+                		 response.set_return(param);
+                		 return response;
+                	 }
+            }
      
          
         /**
@@ -295,6 +458,13 @@ import org.apache.axis2.AxisFault;
     					instanceCounter++;    					
     					users.put(instance, null);
     					this.name = name;
+    					if(!bankAcc.containsKey(name)){
+							//Initialize bankAcc map
+							bankAcc.put(name, new HashMap<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit>());
+						}
+    					if(!movementList.containsKey(name)){
+    						movementList.put(name, new ArrayList<es.upm.fi.sos.upmbank.xsd.Movement>());
+    					}
     					
                 		return response;
                 	}else{
@@ -337,7 +507,11 @@ import org.apache.axis2.AxisFault;
 						instanceCounter++;
 						users.put(instance, stub);
 						password.putIfAbsent(name, psw);
-						this.name = name; //We don't really need this, it only serve to know who is the super user
+						if(!bankAcc.containsKey(name)){
+							//Initialize bankAcc map
+							bankAcc.put(name, new HashMap<>());
+						}
+						this.name = name;
 					}else{
 						//Nada, no guardamos rasgos
 					}
@@ -370,8 +544,46 @@ import org.apache.axis2.AxisFault;
                   )
             {
                 //TODO : fill this with the necessary business logic
-                throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#getMyMovements");
-        }
+                //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#getMyMovements");
+                	 es.upm.fi.sos.upmbank.GetMyMovementsResponse response = 
+                			 new es.upm.fi.sos.upmbank.GetMyMovementsResponse();
+                	 es.upm.fi.sos.upmbank.xsd.MovementList param = 
+                			 new es.upm.fi.sos.upmbank.xsd.MovementList();
+                	 
+                	 if(name != null){
+                		 int arraySize = movementList.get(name).size();
+                		 double[] movement;
+                		 if(arraySize <= 10){
+                			 movement = new double[arraySize];
+                			 int i = 0;
+                			 for(es.upm.fi.sos.upmbank.xsd.Movement m: movementList.get(name)){
+                				movement[i] = m.getQuantity();
+                				i++;
+                			 }
+                		 }else{
+                			 movement = new double[10];
+                			 List<es.upm.fi.sos.upmbank.xsd.Movement> tenLastMovement = 
+                					 movementList.get(name).subList(movementList.get(name).size() - 10, movementList.get(name).size());
+                			 int i = 0;
+                			 for(es.upm.fi.sos.upmbank.xsd.Movement m: tenLastMovement){
+                				 movement[i] = m.getQuantity();
+                				 i++;
+                			 }
+                		 }
+                		 
+                		 param.setResult(true);
+                		 param.setMovementQuantities(movement);
+                		 response.set_return(param);
+                		 return response;
+                		 
+
+                	 }else{
+                		 //Doesn't connect or any other problem
+                		 param.setResult(false);
+                		 response.set_return(param);
+                		 return response;
+                	 }
+            }
      
          
         /**
