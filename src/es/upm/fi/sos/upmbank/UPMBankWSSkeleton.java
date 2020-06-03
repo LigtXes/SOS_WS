@@ -11,6 +11,7 @@ import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Logger;
 import java.util.Map;
 
@@ -25,11 +26,10 @@ import org.apache.axis2.AxisFault;
     	private int instance;
     
     	//Use to know info about super user
-    	private String name; 
+    	private String name = null; 
     	private static String superUserPSW = "admin";
+    	private boolean connected = false;
     	
-    	private Map<Integer, es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub> users = 
-    			new HashMap<>(); //<instance, Stub>
     	private static Map<String, String> password = 
     	 		new HashMap<>(); //<Username, password>
     	private static Map<String, Map<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit>> bankAcc = 
@@ -56,7 +56,7 @@ import org.apache.axis2.AxisFault;
                 	 es.upm.fi.sos.upmbank.xsd.BankAccountResponse param = 
                 			 new es.upm.fi.sos.upmbank.xsd.BankAccountResponse();
                 	 
-                	 if(name != null & addBankAcc.isArgs0Specified() & addBankAcc.localArgs0.isQuantitySpecified()){ //We stop at the first one who is false
+                	 if(connected & name != null & addBankAcc.isArgs0Specified() & addBankAcc.localArgs0.isQuantitySpecified()){ //We stop at the first one who is false
                 		 es.upm.fi.sos.upmbank.xsd.BankAccount bankAccount = 
                 				 new es.upm.fi.sos.upmbank.xsd.BankAccount();
                 		 es.upm.fi.sos.upmbank.xsd.Deposit bankDeposit = 
@@ -98,18 +98,36 @@ import org.apache.axis2.AxisFault;
                 	 es.upm.fi.sos.upmbank.xsd.Response param = 
                 			 new es.upm.fi.sos.upmbank.xsd.Response();
                 	 
-                	 if(name != null & closeBankAcc.localArgs0Tracker & closeBankAcc.localArgs0.isIBANSpecified()){
+                	 if( connected & name != null & closeBankAcc.localArgs0Tracker & closeBankAcc.localArgs0.isIBANSpecified()){
                 		 //Connect
                 		 String IBAN = closeBankAcc.getArgs0().getIBAN();
                 		 
+                		 es.upm.fi.sos.upmbank.xsd.BankAccount bank = 
+                				 new es.upm.fi.sos.upmbank.xsd.BankAccount();
+                		 
+                		 Map<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit> temp =
+                				 bankAcc.get(name);
+                		 
+                		 System.out.println(temp.toString());
+                		 
+                		 boolean keyExist = false;
+                		 
+                		for(Map.Entry<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit> m: temp.entrySet()){
+                			System.out.println("L'IBAN de ce compte est: "+m.getKey());
+                			if(m.getKey().getIBAN().equals(IBAN)){
+                				bank = m.getKey();
+                				keyExist = true;
+                				break;
+                			}
+                		}
              
-                		 if(!bankAcc.get(name).containsKey(IBAN)){
+                		 if(!keyExist){
                 			 //En ese caso la cuenta especificada no existe
                 			 param.setResponse(false);
                 			 response.set_return(param);
                 			 return response;
                 		 }
-                		 es.upm.fi.sos.upmbank.xsd.Deposit deposit = bankAcc.get(name).get(IBAN);
+                		 es.upm.fi.sos.upmbank.xsd.Deposit deposit = bankAcc.get(name).get(bank);
                 		 
                 		 if(deposit.getQuantity() != 0){
                 			 //Comprobamos que la cuenta es igual a 0
@@ -118,7 +136,7 @@ import org.apache.axis2.AxisFault;
                 			 return response;
                 		 }
                 		 
-                		 bankAcc.get(name).remove(IBAN); //Boramos la cuenta tras haberlo controlado todo
+                		 bankAcc.get(name).remove(bank); //Boramos la cuenta tras haberlo controlado todo
                 		 
                 		 param.setResponse(true);
                 		 response.set_return(param);
@@ -148,9 +166,7 @@ import org.apache.axis2.AxisFault;
             {
                 //TODO : fill this with the necessary business logic
                 	 //es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub = users.get(instance);
-                	if(users.containsKey(instance)){
-                		users.remove(instance);
-                	}
+                	 connected = false;
                 	name = null; //Eso nos permite saber que ya no esta identificado
                 
         }
@@ -170,25 +186,35 @@ import org.apache.axis2.AxisFault;
             {
                 //TODO : fill this with the necessary business logic
                 //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#removeUser");
+                	 System.out.println("Remove User");
                 	 es.upm.fi.sos.upmbank.RemoveUserResponse response = new es.upm.fi.sos.upmbank.RemoveUserResponse();
                 	 es.upm.fi.sos.upmbank.xsd.Response param = new es.upm.fi.sos.upmbank.xsd.Response();
+                	 System.out.println("Nombre del cliente: "+name);
                 	 if(name.equals("admin")){
+                		 System.out.println("Administrador");
                 		 String username = removeUser.localArgs0.getUsername();
-                		 if(username.equals("admin")){
+                		 if(connected & username.equals("admin")){
                 			 //No se puede borrar el administrador
                 			 param.setResponse(false);
                 			 response.set_return(param);
                 			 return response;
                 		 }else{
                 			 try{
+                				 if(!password.containsKey(username)){
+                					 param.setResponse(false);
+                					 response.set_return(param);
+                					 return response;
+                				 }
+                				 System.out.println("PAssword is in Array");
                 				 String psw = password.get(username);
                 				 
-                				 if(bankAcc.get(username).size() != 0){
+                				 if(bankAcc.containsKey(username) && bankAcc.get(username).size() != 0){
                 					 //El usuario aun tiene cuentas bancarias
                 					 param.setResponse(false);
                         			 response.set_return(param);
                         			 return response;
                 				 }
+                				 System.out.println("User don't have any bankAccount");
                 				 
 	                    		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub = 
 	                    				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub();
@@ -202,9 +228,17 @@ import org.apache.axis2.AxisFault;
 	                    		 paramServ.setName(username);
 	                    		 paramServ.setPassword(psw);
 	                    		 removeUserToServer.setRemoveUser(paramServ);
+	                    		 System.out.println("Send to server");
 	                    		 responseFromServer = stub.removeUser(removeUserToServer);
-	                    		 
+	                    		 System.out.println("Receiv from server");
 	                    		 param.setResponse(responseFromServer.get_return().getResult());
+	                    		 
+	                    		 if(responseFromServer.get_return().getResult()){
+	                    			 password.remove(username);
+	                    			 bankAcc.remove(username);
+	                    			 movementList.remove(username);
+	                    		 }
+	                    		 
 	                    		 response.set_return(param);
 	                    		 return response;
 	                    		 
@@ -244,25 +278,57 @@ import org.apache.axis2.AxisFault;
                 			 new es.upm.fi.sos.upmbank.AddWithdrawalResponse();
                 	 es.upm.fi.sos.upmbank.xsd.AddMovementResponse param = 
                 			 new es.upm.fi.sos.upmbank.xsd.AddMovementResponse();
-                	 if(name != null &
+                	 
+                	 System.out.println("AddWithdrawal: "+addWithdrawal.toString());
+                	 System.out.println("Name: "+name);
+                	 System.out.println("LocalArgs: "+addWithdrawal.localArgs0Tracker);
+                	 System.out.println("LocalArgs IBAN: "+addWithdrawal.localArgs0.isIBANSpecified());
+                	 System.out.println("LocalArgs Quantity: "+addWithdrawal.localArgs0.isQuantitySpecified());
+                	 if(connected & name != null &
                 			 addWithdrawal.localArgs0Tracker &
                 			 addWithdrawal.localArgs0.isIBANSpecified() &
                 			 addWithdrawal.localArgs0.isQuantitySpecified()){
                 		 //Connect
+                		 
+                		 System.out.println("IBAN: "+addWithdrawal.localArgs0.getIBAN());
+                		 System.out.println("Quantity: "+addWithdrawal.localArgs0.getQuantity());
                 		 
                 		 es.upm.fi.sos.upmbank.xsd.Movement movement = 
                 				 new es.upm.fi.sos.upmbank.xsd.Movement();
                 		 String IBAN = addWithdrawal.getArgs0().getIBAN();
                 		 double withdraw = addWithdrawal.getArgs0().getQuantity();
                 		 
-                		 if(!bankAcc.get(name).containsKey(IBAN)){
+                		 es.upm.fi.sos.upmbank.xsd.BankAccount bank = 
+                				 new es.upm.fi.sos.upmbank.xsd.BankAccount();
+                		 
+                		 Map<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit> temp =
+                				 bankAcc.get(name);
+                		 
+                		 System.out.println(temp.toString());
+                		 
+                		 boolean keyExist = false;
+                		 
+                		for(Map.Entry<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit> m: temp.entrySet()){
+                			System.out.println("L'IBAN de ce compte est: "+m.getKey());
+                			if(m.getKey().getIBAN().equals(IBAN)){
+                				bank = m.getKey();
+                				keyExist = true;
+                				break;
+                			}
+                		}
+                		 
+                		 
+                		 if(!keyExist){
+                			 System.out.println("Account doesn't exist");
                 			 param.setResult(false);
                 			 response.set_return(param);
                 			 return response;
                 		 }
                 		 
-                		 double deposit = bankAcc.get(name).get(IBAN).getQuantity();
+                		 double deposit = bankAcc.get(name).get(bank).getQuantity();
                 		 double newDeposite = deposit - withdraw;
+                		 
+                		 System.out.println("New deposit: "+newDeposite);
                 		 
                 		 if(newDeposite < 0){
                 			 param.setResult(false);
@@ -270,12 +336,13 @@ import org.apache.axis2.AxisFault;
                 			 return response;
                 		 }
                 		 
-                		 bankAcc.get(name).get(IBAN).setQuantity(newDeposite);
+                		 bankAcc.get(name).get(bank).setQuantity(newDeposite);
                 		 
                 		 movement.setIBAN(IBAN);
                 		 movement.setQuantity(withdraw * (-1)); //We multiply per -1 to know it's a withdraw
                 		 movementList.get(name).add(movement);
                 		 
+                		 System.out.println("Return");
                 		 param.setBalance(newDeposite);
                 		 param.setResult(true);
                 		 response.set_return(param);
@@ -302,6 +369,7 @@ import org.apache.axis2.AxisFault;
                   (
                   es.upm.fi.sos.upmbank.AddUser addUser
                   )
+                  
             {
                 //TODO : fill this with the necessary business logic
                 //throw new  java.lang.UnsupportedOperationException("Please implement " + this.getClass().getName() + "#addUser");
@@ -310,10 +378,14 @@ import org.apache.axis2.AxisFault;
                 	 es.upm.fi.sos.upmbank.AddUserResponse response = new es.upm.fi.sos.upmbank.AddUserResponse();
                 	 es.upm.fi.sos.upmbank.xsd.AddUserResponse param = new es.upm.fi.sos.upmbank.xsd.AddUserResponse();
                 	 
-                	 
-                	 if(this.name.equals("admin")){
+                	 System.out.println("Adduser: "+addUser.toString());
+                	 System.out.println("Adduser param: "+addUser.localArgs0.toString());
+                	 System.out.println("My current name is: "+this.name);
+                	 if(connected & this.name.equals("admin")){
                 		 
 						try {
+							
+							System.out.println("Admin - Creating: "+addUser.getArgs0().getUsername());
 							es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub = 
 	                				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub();
 							 //Check if user exist
@@ -333,7 +405,6 @@ import org.apache.axis2.AxisFault;
 		                		 response.set_return(param);
 							}
 							
-							stub = new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub();
 	
 	     					es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.AddUserResponse userResponse = 
 	     							new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.AddUserResponse();
@@ -347,11 +418,14 @@ import org.apache.axis2.AxisFault;
 	     					addUser2.setUser(addUserBack);
      					
 							//userResponse = stub.startaddUser(addUser2, new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonCallbackHandler());
-							userResponse = stub.addUser(addUser2);
+							System.out.println("Sending to Authentication: "+addUser2.toString());
+	     					userResponse = stub.addUser(addUser2);
+	     					System.out.println("Receiv response: "+userResponse.toString());
 	     					
 							param.setPwd(userResponse.get_return().getPassword());
 							param.setResponse(userResponse.get_return().getResult());
 							
+							password.put(addUser.localArgs0.getUsername(), userResponse.get_return().getPassword());							
 							
 							response.set_return(param);
 						} catch (AxisFault e1) {
@@ -389,8 +463,7 @@ import org.apache.axis2.AxisFault;
                 			 new es.upm.fi.sos.upmbank.AddIncomeResponse();
                 	 es.upm.fi.sos.upmbank.xsd.AddMovementResponse param = 
                 			 new es.upm.fi.sos.upmbank.xsd.AddMovementResponse();
-                	 
-                	 if(name != null &
+                	 if(connected & name != null &
                 			 addIncome.localArgs0Tracker &
                 			 addIncome.localArgs0.isIBANSpecified() &
                 			 addIncome.localArgs0.isQuantitySpecified()){
@@ -401,15 +474,35 @@ import org.apache.axis2.AxisFault;
                 		 String IBAN = addIncome.getArgs0().getIBAN();
                 		 double income = addIncome.getArgs0().getQuantity();
                 		 
-                		 if(!bankAcc.get(name).containsKey(IBAN)){
+                		                		 
+                		 es.upm.fi.sos.upmbank.xsd.BankAccount bank = 
+                				 new es.upm.fi.sos.upmbank.xsd.BankAccount();
+                		 
+                		 Map<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit> temp =
+                				 bankAcc.get(name);
+                		 
+                		 System.out.println(temp.toString());
+                		 
+                		 boolean keyExist = false;
+                		 
+                		for(Map.Entry<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit> m: temp.entrySet()){
+                			System.out.println("L'IBAN de ce compte est: "+m.getKey());
+                			if(m.getKey().getIBAN().equals(IBAN)){
+                				bank = m.getKey();
+                				keyExist = true;
+                				break;
+                			}
+                		}
+                		 
+                		 if(!keyExist){
                 			 param.setResult(false);
                 			 response.set_return(param);
                 			 return response;
                 		 }
                 		 
-                		 double deposit = bankAcc.get(name).get(IBAN).getQuantity();
+                		 double deposit = bankAcc.get(name).get(bank).getQuantity();
                 		 double newDeposite = income + deposit;
-                		 bankAcc.get(name).get(IBAN).setQuantity(newDeposite);
+                		 bankAcc.get(name).get(bank).setQuantity(newDeposite);
                 		 
                 		 movement.setIBAN(IBAN);
                 		 movement.setQuantity(income);
@@ -460,8 +553,11 @@ import org.apache.axis2.AxisFault;
     					
     					instance = instanceCounter;
     					instanceCounter++;    					
-    					users.put(instance, null);
+    					
+    					
+    					System.out.println("Pongo name = admin");
     					this.name = name;
+    					connected = true;
     					if(!bankAcc.containsKey(name)){
 							//Initialize bankAcc map
 							bankAcc.put(name, new HashMap<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit>());
@@ -509,12 +605,16 @@ import org.apache.axis2.AxisFault;
 					if(resp == true){
 						instance = instanceCounter;
 						instanceCounter++;
-						users.put(instance, stub);
 						password.putIfAbsent(name, psw);
 						if(!bankAcc.containsKey(name)){
 							//Initialize bankAcc map
-							bankAcc.put(name, new HashMap<>());
+							bankAcc.put(name, new HashMap<es.upm.fi.sos.upmbank.xsd.BankAccount, es.upm.fi.sos.upmbank.xsd.Deposit>());
 						}
+						if(!movementList.containsKey(name)){
+							movementList.put(name, new ArrayList<es.upm.fi.sos.upmbank.xsd.Movement>());
+						}
+						System.out.println("Guardo el nombre del cliente: "+name);
+						connected = true;
 						this.name = name;
 					}else{
 						//Nada, no guardamos rasgos
@@ -554,7 +654,7 @@ import org.apache.axis2.AxisFault;
                 	 es.upm.fi.sos.upmbank.xsd.MovementList param = 
                 			 new es.upm.fi.sos.upmbank.xsd.MovementList();
                 	 
-                	 if(name != null){
+                	 if(connected & name != null){
                 		 int arraySize = movementList.get(name).size();
                 		 double[] movement;
                 		 if(arraySize <= 10){
@@ -612,7 +712,12 @@ import org.apache.axis2.AxisFault;
                 	 
                 	 String old = changePassword.localArgs0.getOldpwd();
                 	 String newPsw = changePassword.localArgs0.getNewpwd();
-                	 
+                	 if(!connected){
+                		 //Not log
+                		 param.setResponse(false);
+            			 response.set_return(param);
+            			 return response;
+                	 }
                 	 if(name.equals("admin")){
                 		 if(superUserPSW.equals(old)){
                 			 superUserPSW = newPsw;
@@ -628,8 +733,7 @@ import org.apache.axis2.AxisFault;
                 	 else if(password.get(name).equals(old)){
                 		 try{
 	                		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub stub;
-	                		 stub = users.get(instance);
-	                		 
+	                		 stub = new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub();
 	                		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ChangePasswordResponseE responseFromServ = 
 	                				 new es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ChangePasswordResponseE();
 	                		 es.upm.fi.sos.t3.backend.UPMAuthenticationAuthorizationWSSkeletonStub.ChangePassword server = 
@@ -643,6 +747,10 @@ import org.apache.axis2.AxisFault;
 	                		 server.setChangePassword(serverParam);
 	                		 
 	                		 responseFromServ = stub.changePassword(server);
+	                		 
+	                		 if(responseFromServ.get_return().getResult()){
+	                			 password.put(name, newPsw);
+	                		 }
 	                		 
 	                		 param.setResponse(responseFromServ.get_return().getResult());
 	                		 response.set_return(param);
